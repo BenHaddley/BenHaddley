@@ -68,9 +68,9 @@
   <text class="label" x="396" y="347.8" xml:space="preserve">Followers ............</text>
   <text class="val" x="640" y="347.8">3</text>
   <text class="label" x="396" y="367.0" xml:space="preserve">Contributed To .......</text>
-  <text class="val" x="640" y="367.0">1</text>
+  <text class="val" x="640" y="367.0">0</text>
   <text class="label" x="396" y="386.2" xml:space="preserve">Lines of Code ........</text>
-  <text class="val" x="640" y="386.2">11,970</text>
+  <text class="val" x="640" y="386.2">12,197</text>
   <text class="label" x="396" y="405.4" xml:space="preserve">  (+/-) ..............</text>
-  <text class="val" x="640" y="405.4"><tspan class="pos">+31,942</tspan><tspan class="muted">, </tspan><tspan class="neg">-19,972</tspan></text>
+  <text class="val" x="640" y="405.4"><tspan class="pos">+32,372</tspan><tspan class="muted">, </tspan><tspan class="neg">-20,175</tspan></text>
 </svg>
