@@ -1,33 +1,51 @@
 #!/usr/bin/env python3
 """
-Pulls live GitHub stats via the GraphQL/REST APIs and writes them into the
-id'd <text> elements of dark_mode.svg / light_mode.svg.
+Fetches BenHaddley's public GitHub statistics and bakes them into
+dark_mode.svg / light_mode.svg by filling in the {{PLACEHOLDER}} tokens
+found in templates/profile_dark.svg and templates/profile_light.svg.
 
-Requires env var GITHUB_TOKEN (a PAT with 'repo' and 'read:user' scopes).
-Optional env var GITHUB_ACTOR overrides the username (defaults to USERNAME below).
+Auth: uses the token in GITHUB_TOKEN. In the GitHub Actions workflow this
+is the repo-scoped ${{ secrets.GITHUB_TOKEN }} -- no personal access token
+is required. Because that token authenticates as the workflow bot rather
+than as BenHaddley personally, GitHub only returns PUBLIC data for it:
+public repos, public stars, public contribution counts, and public commit
+history. That matches what this card displays (see README / summary for
+the exact limitation).
+
+Run locally for testing with:
+    GITHUB_TOKEN=$(gh auth token) python3 scripts/update_stats.py
 """
 
-import os
-import time
-import hashlib
 import datetime
-import xml.etree.ElementTree as ET
+import os
+import sys
+import time
 
 import requests
 
-USERNAME = os.environ.get("GITHUB_ACTOR") or os.environ.get("PROFILE_USERNAME", "BenHaddley")
-TOKEN = os.environ["GITHUB_TOKEN"]
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMPLATES_DIR = os.path.join(REPO_ROOT, "templates")
+CACHE_DIR = os.path.join(REPO_ROOT, "cache")
 
-HEADERS = {"Authorization": f"bearer {TOKEN}"}
+USERNAME = os.environ.get("PROFILE_USERNAME", "BenHaddley")
+TOKEN = os.environ.get("GITHUB_TOKEN")
+if not TOKEN:
+    sys.exit("GITHUB_TOKEN is not set")
+
+HEADERS = {
+    "Authorization": f"Bearer {TOKEN}",
+    "Accept": "application/vnd.github+json",
+}
 GRAPHQL_URL = "https://api.github.com/graphql"
 REST_URL = "https://api.github.com"
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
+# Safety cap so a repo with a huge commit history can't blow out the
+# workflow runtime on a cold cache. Repos over this size keep whatever LOC
+# figure is already cached (0 the very first time) rather than the job
+# hanging for tens of minutes on a single repo.
+MAX_COMMITS_PER_REPO = 400
+
 CACHE_FILE = os.path.join(CACHE_DIR, f"{USERNAME.lower()}.cache")
-
-SVG_FILES = ["dark_mode.svg", "light_mode.svg"]
-
-ET.register_namespace("", "http://www.w3.org/2000/svg")
 
 
 def graphql(query, variables=None):
@@ -44,47 +62,40 @@ def graphql(query, variables=None):
     return data["data"]
 
 
-def get_user_id_and_created_at():
+def get_created_at():
     query = """
     query($login: String!) {
-      user(login: $login) {
-        id
-        createdAt
-      }
+      user(login: $login) { createdAt }
     }
     """
-    data = graphql(query, {"login": USERNAME})["user"]
-    return data["id"], data["createdAt"]
+    return graphql(query, {"login": USERNAME})["user"]["createdAt"]
 
 
 def get_followers():
     query = """
     query($login: String!) {
-      user(login: $login) {
-        followers { totalCount }
-      }
+      user(login: $login) { followers { totalCount } }
     }
     """
     return graphql(query, {"login": USERNAME})["user"]["followers"]["totalCount"]
 
 
 def get_repos_and_stars():
-    """Sum stargazers across all repos the user owns (paginated)."""
+    """Public, non-fork repositories owned by USERNAME (paginated)."""
     query = """
     query($login: String!, $after: String) {
       user(login: $login) {
-        repositories(first: 100, after: $after, ownerAffiliations: OWNER, isFork: false) {
+        repositories(first: 100, after: $after, ownerAffiliations: OWNER,
+                      isFork: false, privacy: PUBLIC) {
           totalCount
           pageInfo { hasNextPage endCursor }
           nodes {
+            name
             nameWithOwner
             stargazerCount
             defaultBranchRef {
-              name
               target {
-                ... on Commit {
-                  history { totalCount }
-                }
+                ... on Commit { history { totalCount } }
               }
             }
           }
@@ -92,27 +103,26 @@ def get_repos_and_stars():
       }
     }
     """
-    repos = []
-    stars = 0
-    total_count = 0
+    repos, stars, total = [], 0, 0
     after = None
     while True:
         data = graphql(query, {"login": USERNAME, "after": after})["user"]["repositories"]
-        total_count = data["totalCount"]
+        total = data["totalCount"]
         for node in data["nodes"]:
             stars += node["stargazerCount"]
             repos.append(node)
         if not data["pageInfo"]["hasNextPage"]:
             break
         after = data["pageInfo"]["endCursor"]
-    return total_count, stars, repos
+    return total, stars, repos
 
 
 def get_contributed_to_count():
     query = """
     query($login: String!) {
       user(login: $login) {
-        repositoriesContributedTo(first: 1, contributionTypes: [COMMIT, PULL_REQUEST, ISSUE, REPOSITORY]) {
+        repositoriesContributedTo(first: 1,
+          contributionTypes: [COMMIT, PULL_REQUEST, ISSUE, REPOSITORY]) {
           totalCount
         }
       }
@@ -121,9 +131,10 @@ def get_contributed_to_count():
     return graphql(query, {"login": USERNAME})["user"]["repositoriesContributedTo"]["totalCount"]
 
 
-def get_total_commits(created_at):
-    """Sum contributionsCollection.totalCommitContributions across every year
-    since account creation (public + private, restricted count included)."""
+def get_public_commit_contributions(created_at):
+    """Sum totalCommitContributions across every year since account
+    creation. Only public commits are visible to a non-owner token such as
+    the workflow's GITHUB_TOKEN -- private-repo commits are not counted."""
     start = datetime.datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ").replace(
         tzinfo=datetime.timezone.utc
     )
@@ -134,7 +145,6 @@ def get_total_commits(created_at):
       user(login: $login) {
         contributionsCollection(from: $from, to: $to) {
           totalCommitContributions
-          restrictedContributionsCount
         }
       }
     }
@@ -152,7 +162,7 @@ def get_total_commits(created_at):
                 "to": year_end.strftime("%Y-%m-%dT%H:%M:%SZ"),
             },
         )["user"]["contributionsCollection"]
-        total += data["totalCommitContributions"] + data["restrictedContributionsCount"]
+        total += data["totalCommitContributions"]
         year_start = year_end
     return total
 
@@ -160,7 +170,7 @@ def get_total_commits(created_at):
 def load_cache():
     cache = {}
     if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r") as f:
+        with open(CACHE_FILE) as f:
             for line in f:
                 parts = line.strip().split(",")
                 if len(parts) == 4:
@@ -171,23 +181,29 @@ def load_cache():
 def save_cache(cache):
     os.makedirs(CACHE_DIR, exist_ok=True)
     with open(CACHE_FILE, "w") as f:
-        for repo, (commit_count, added, deleted) in cache.items():
+        for repo, (commit_count, added, deleted) in sorted(cache.items()):
             f.write(f"{repo},{commit_count},{added},{deleted}\n")
 
 
 def repo_loc(repo, cache):
-    """Additions/deletions authored by USERNAME on a repo's default branch,
-    via the REST commits + stats endpoint. Cached per-repo by commit count
-    so unchanged repos are skipped on subsequent runs."""
+    """Additions/deletions authored by USERNAME on a repo's default branch.
+    Cached by commit count so a repo with no new commits since last run
+    costs zero extra API calls."""
     name = repo["nameWithOwner"]
     branch_ref = repo.get("defaultBranchRef")
-    if not branch_ref:
+    if not branch_ref or not branch_ref.get("target"):
         return 0, 0
 
     commit_count = branch_ref["target"]["history"]["totalCount"]
     cached = cache.get(name)
     if cached and cached[0] == commit_count:
         return cached[1], cached[2]
+
+    if commit_count > MAX_COMMITS_PER_REPO and not cached:
+        print(f"  skipping LOC for {name}: {commit_count} commits exceeds "
+              f"the {MAX_COMMITS_PER_REPO}-commit cold-cache safety cap", file=sys.stderr)
+        cache[name] = (commit_count, 0, 0)
+        return 0, 0
 
     added = deleted = 0
     page = 1
@@ -199,24 +215,22 @@ def repo_loc(repo, cache):
             timeout=30,
         )
         if resp.status_code == 409:
-            # empty repository
-            break
+            break  # empty repository
         resp.raise_for_status()
         commits = resp.json()
         if not commits:
             break
 
         for c in commits:
-            sha = c["sha"]
             detail = requests.get(
-                f"{REST_URL}/repos/{name}/commits/{sha}", headers=HEADERS, timeout=30
+                f"{REST_URL}/repos/{name}/commits/{c['sha']}", headers=HEADERS, timeout=30
             )
             if detail.status_code != 200:
                 continue
             stats = detail.json().get("stats", {})
             added += stats.get("additions", 0)
             deleted += stats.get("deletions", 0)
-            time.sleep(0.02)  # stay comfortably under the REST rate limit
+            time.sleep(0.02)
 
         if len(commits) < 100:
             break
@@ -241,45 +255,52 @@ def fmt(n):
     return f"{n:,}"
 
 
-def update_svg(path, values):
-    tree = ET.parse(path)
-    root = tree.getroot()
-    for element_id, text in values.items():
-        el = root.find(f".//*[@id='{element_id}']")
-        if el is None:
-            raise RuntimeError(f"{path}: no element with id={element_id!r}")
-        el.text = text
-    tree.write(path, xml_declaration=False, encoding="unicode")
+def render(template_path, out_path, values):
+    with open(template_path) as f:
+        svg = f.read()
+    for key, val in values.items():
+        svg = svg.replace("{{" + key + "}}", val)
+    remaining = [tok for tok in ("{{OS}}", "{{ROLE}}", "{{EDITOR}}", "{{REPOS}}", "{{COMMITS}}",
+                                  "{{STARS}}", "{{FOLLOWERS}}", "{{CONTRIBUTED}}", "{{LOC}}",
+                                  "{{ADDITIONS}}", "{{DELETIONS}}") if tok in svg]
+    if remaining:
+        raise RuntimeError(f"{out_path}: unresolved placeholders {remaining}")
+    with open(out_path, "w") as f:
+        f.write(svg)
 
 
 def main():
-    print(f"Collecting stats for {USERNAME}...")
+    print(f"Collecting public stats for {USERNAME}...")
 
-    _, created_at = get_user_id_and_created_at()
+    created_at = get_created_at()
     followers = get_followers()
     repo_count, stars, repos = get_repos_and_stars()
     contributed_to = get_contributed_to_count()
-    commits = get_total_commits(created_at)
+    commits = get_public_commit_contributions(created_at)
     added, deleted, net = get_loc(repos)
 
     values = {
-        "repo_data": fmt(repo_count),
-        "star_data": fmt(stars),
-        "follower_data": fmt(followers),
-        "contrib_data": fmt(contributed_to),
-        "commit_data": fmt(commits),
-        "loc_data": fmt(net),
-        "add_data": fmt(added),
-        "del_data": fmt(deleted),
+        "OS": "Arch Linux / Debian",
+        "ROLE": "Signaller / Network Engineer",
+        "EDITOR": "Neovim, VS Code",
+        "REPOS": fmt(repo_count),
+        "COMMITS": fmt(commits),
+        "STARS": fmt(stars),
+        "FOLLOWERS": fmt(followers),
+        "CONTRIBUTED": fmt(contributed_to),
+        "LOC": fmt(net),
+        "ADDITIONS": fmt(added),
+        "DELETIONS": fmt(deleted),
     }
 
     for label, value in values.items():
         print(f"  {label}: {value}")
 
-    for svg_path in SVG_FILES:
-        full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), svg_path)
-        update_svg(full_path, values)
-        print(f"Updated {svg_path}")
+    render(os.path.join(TEMPLATES_DIR, "profile_dark.svg"),
+           os.path.join(REPO_ROOT, "dark_mode.svg"), values)
+    render(os.path.join(TEMPLATES_DIR, "profile_light.svg"),
+           os.path.join(REPO_ROOT, "light_mode.svg"), values)
+    print("Wrote dark_mode.svg and light_mode.svg")
 
 
 if __name__ == "__main__":

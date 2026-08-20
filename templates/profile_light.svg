@@ -47,11 +47,11 @@
   <text class="ascii" x="36" y="423" xml:space="preserve">           ######################################</text>
   <text class="head" x="396" y="52.0" xml:space="preserve">benhaddley@github ---------------------------------------------</text>
   <text class="label" x="396" y="77.2" xml:space="preserve">OS ...................</text>
-  <text class="val" x="640" y="77.2">Arch Linux / Debian</text>
+  <text class="val" x="640" y="77.2">{{OS}}</text>
   <text class="label" x="396" y="96.4" xml:space="preserve">Role .................</text>
-  <text class="val" x="640" y="96.4">Signaller / Network Engineer</text>
+  <text class="val" x="640" y="96.4">{{ROLE}}</text>
   <text class="label" x="396" y="115.6" xml:space="preserve">Editor ...............</text>
-  <text class="val" x="640" y="115.6">Neovim, VS Code</text>
+  <text class="val" x="640" y="115.6">{{EDITOR}}</text>
   <text class="sect" x="396" y="139.8" xml:space="preserve">Languages.Programming -----------------------------------------------</text>
   <text class="text" x="396" y="159.0" xml:space="preserve">Python, JavaScript, Bash, Java</text>
   <text class="sect" x="396" y="183.2" xml:space="preserve">Interests.Technology ------------------------------------------------</text>
@@ -60,17 +60,17 @@
   <text class="text" x="396" y="245.8" xml:space="preserve">Meshtastic BFT, DataHarbor, Code Forge</text>
   <text class="sect" x="396" y="271.0" xml:space="preserve">GitHub Stats --------------------------------------------------------</text>
   <text class="label" x="396" y="290.2" xml:space="preserve">Repos ................</text>
-  <text class="val" x="640" y="290.2">15</text>
+  <text class="val" x="640" y="290.2">{{REPOS}}</text>
   <text class="label" x="396" y="309.4" xml:space="preserve">Commits ..............</text>
-  <text class="val" x="640" y="309.4">53</text>
+  <text class="val" x="640" y="309.4">{{COMMITS}}</text>
   <text class="label" x="396" y="328.6" xml:space="preserve">Stars ................</text>
-  <text class="val" x="640" y="328.6">0</text>
+  <text class="val" x="640" y="328.6">{{STARS}}</text>
   <text class="label" x="396" y="347.8" xml:space="preserve">Followers ............</text>
-  <text class="val" x="640" y="347.8">3</text>
+  <text class="val" x="640" y="347.8">{{FOLLOWERS}}</text>
   <text class="label" x="396" y="367.0" xml:space="preserve">Contributed To .......</text>
-  <text class="val" x="640" y="367.0">1</text>
+  <text class="val" x="640" y="367.0">{{CONTRIBUTED}}</text>
   <text class="label" x="396" y="386.2" xml:space="preserve">Lines of Code ........</text>
-  <text class="val" x="640" y="386.2">11,970</text>
+  <text class="val" x="640" y="386.2">{{LOC}}</text>
   <text class="label" x="396" y="405.4" xml:space="preserve">  (+/-) ..............</text>
-  <text class="val" x="640" y="405.4"><tspan class="pos">+31,942</tspan><tspan class="muted">, </tspan><tspan class="neg">-19,972</tspan></text>
+  <text class="val" x="640" y="405.4"><tspan class="pos">+{{ADDITIONS}}</tspan><tspan class="muted">, </tspan><tspan class="neg">-{{DELETIONS}}</tspan></text>
 </svg>
