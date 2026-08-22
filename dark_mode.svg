@@ -62,9 +62,9 @@
   <text class="text" x="396" y="245.8" xml:space="preserve">Meshtastic BFT, DataHarbor, Code Forge</text>
   <text class="sect" x="396" y="271.0" xml:space="preserve">GitHub Stats --------------------------------------------------------</text>
   <text class="label" x="396" y="290.2" xml:space="preserve">Repos ................</text>
-  <text class="val" x="640" y="290.2">15</text>
+  <text class="val" x="640" y="290.2">16</text>
   <text class="label" x="396" y="309.4" xml:space="preserve">Commits ..............</text>
-  <text class="val" x="640" y="309.4">57</text>
+  <text class="val" x="640" y="309.4">74</text>
   <text class="label" x="396" y="328.6" xml:space="preserve">Stars ................</text>
   <text class="val" x="640" y="328.6">0</text>
   <text class="label" x="396" y="347.8" xml:space="preserve">Followers ............</text>
@@ -72,7 +72,7 @@
   <text class="label" x="396" y="367.0" xml:space="preserve">Contributed To .......</text>
   <text class="val" x="640" y="367.0">0</text>
   <text class="label" x="396" y="386.2" xml:space="preserve">Lines of Code ........</text>
-  <text class="val" x="640" y="386.2">12,205</text>
+  <text class="val" x="640" y="386.2">16,132</text>
   <text class="label" x="396" y="405.4" xml:space="preserve">  (+/-) ..............</text>
-  <text class="val" x="640" y="405.4"><tspan class="pos">+32,630</tspan><tspan class="muted">, </tspan><tspan class="neg">-20,425</tspan></text>
+  <text class="val" x="640" y="405.4"><tspan class="pos">+37,717</tspan><tspan class="muted">, </tspan><tspan class="neg">-21,585</tspan></text>
 </svg>
