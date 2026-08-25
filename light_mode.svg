@@ -64,15 +64,15 @@
   <text class="label" x="396" y="290.2" xml:space="preserve">Repos ................</text>
   <text class="val" x="640" y="290.2">17</text>
   <text class="label" x="396" y="309.4" xml:space="preserve">Commits ..............</text>
-  <text class="val" x="640" y="309.4">80</text>
+  <text class="val" x="640" y="309.4">108</text>
   <text class="label" x="396" y="328.6" xml:space="preserve">Stars ................</text>
   <text class="val" x="640" y="328.6">0</text>
   <text class="label" x="396" y="347.8" xml:space="preserve">Followers ............</text>
-  <text class="val" x="640" y="347.8">3</text>
+  <text class="val" x="640" y="347.8">4</text>
   <text class="label" x="396" y="367.0" xml:space="preserve">Contributed To .......</text>
   <text class="val" x="640" y="367.0">0</text>
   <text class="label" x="396" y="386.2" xml:space="preserve">Lines of Code ........</text>
-  <text class="val" x="640" y="386.2">111,115</text>
+  <text class="val" x="640" y="386.2">226,661</text>
   <text class="label" x="396" y="405.4" xml:space="preserve">  (+/-) ..............</text>
-  <text class="val" x="640" y="405.4"><tspan class="pos">+132,798</tspan><tspan class="muted">, </tspan><tspan class="neg">-21,683</tspan></text>
+  <text class="val" x="640" y="405.4"><tspan class="pos">+269,449</tspan><tspan class="muted">, </tspan><tspan class="neg">-42,788</tspan></text>
 </svg>
